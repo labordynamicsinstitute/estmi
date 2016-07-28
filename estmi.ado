@@ -1,4 +1,4 @@
-*! version 0.2 15may2012
+*! version 0.3 28july2016
 
 program estmi,eclass
 version 11
@@ -63,20 +63,22 @@ if("`cmpsyn'"=="syn"){
     collapse (mean) q b u (sd) capb_sqrt=q, by (coefid) fast
     quietly gen capb=capb_sqrt^2
     quietly gen T=(1+(1/`m'))*capb-(b/`r')+u
-    quietly gen dof=min(2879910129,(((((1+(1/`m'))*capb)^2)/((`m'-1)*(T^2)))+(((b/`r')^2)/(`m'*(`r'-1)*(T^2))))^(-1))
+    quietly gen dof=min(2879910129,(((((1+(1/`m'))*capb)^2)/((`m'-1)*(T^2)))+(((b/`r')^2)/(`m'*(`r'-1)*(T^2))))^(-1)) if T>0 & (capb>0 | b>0)
+    replace T=(1+(1/`m'))*capb+u if T<0
+    replace dof=`m'-1 if dof<`m'-1
 }
 else{
     collapse (mean) q u (sd) b_sqrt=q, by (coefid) fast
     quietly gen b=b_sqrt^2
     quietly gen T=( 1 + ( 1 / `m' ) ) * b + u
-    quietly gen dof=min(2879910129,(`m'-1)*(1+u/((1+1/`m')*b))^2)
+    quietly gen dof=min(2879910129,(`m'-1)*(1+u/((1+1/`m')*b))^2) if T>0 & b>0
 }
 
 quietly gen coef=q
 quietly gen se=sqrt(T)
 keep coefid coef se dof
 quietly gen tstat=coef/se
-quietly gen pvalue= 2*ttail(dof,abs(tstat))
+quietly gen pvalue= 2*ttail(min(2879910129,dof),abs(tstat))
 quietly gen lower=coef - invttail(dof,0.025)*se
 quietly gen upper=coef + invttail(dof,0.025)*se
 
